@@ -7,4 +7,21 @@
     </Content>
     <Level>0</Level>
   </FoldedText>
+  <FoldedText>
+    <Caption>oeigj</Caption>
+    <Content>
+      <Text>oweifj</Text>
+      <Text>oweifj2</Text>
+      <Text>oweifj3</Text>
+      <FoldedText>
+        <Caption>a</Caption>
+        <Content>
+          <Text>b</Text>
+        </Content>
+        <Level>1</Level>
+      </FoldedText>
+      <Text>oweifj4</Text>
+    </Content>
+    <Level>0</Level>
+  </FoldedText>
 </Document>

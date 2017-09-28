@@ -1,5 +1,3 @@
-module Tests.Write
-
 #load "../XmlPickler.Write.fsx"
 #load "Fixtures.fsx"
 

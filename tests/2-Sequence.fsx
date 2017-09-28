@@ -1,5 +1,3 @@
-module Tests.Sequence
-
 #load "../XmlPickler.Sequence.fsx"
 #load "Fixtures.fsx"
 
