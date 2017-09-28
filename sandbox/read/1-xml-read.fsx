@@ -1,6 +1,6 @@
 open System.Xml
 
-let filename = "data.xml"
+let filename = __SOURCE_DIRECTORY__ + "/../../tests/data/data.xml"
 let reader = new XmlTextReader(filename)
 reader.WhitespaceHandling <- WhitespaceHandling.None
 

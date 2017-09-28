@@ -1,15 +1,19 @@
+module XmlPickler.Write
+
+#load "XmlPickler.Processors.fsx"
+
+open XmlPickler.Processors
+
 open System
 open System.Xml
 open FSharp.Reflection
 open System.Reflection
 open System.IO
 
-type Host 
-  (
-    writer: XmlTextWriter,
-    valueProcessors: ((Type->bool) * (Host->obj->unit)) list,
-    memberProcessors: ((MemberInfo->bool) * (Host->MemberInfo->obj->unit)) list)
-    = 
+type WriterHost (writer: XmlTextWriter,
+                 valueProcessors: ((Type->bool) * (WriterHost->obj->unit)) list,
+                 memberProcessors: ((MemberInfo->bool) * (WriterHost->MemberInfo->obj->unit)) list) = 
+                 
     let valueProcessors = valueProcessors
     let memberProcessors = memberProcessors
 
@@ -24,20 +28,12 @@ type Host
     member this.Writer = writer
 
 
-type ISequenceProcessor =
-  abstract member ToSequence : obj -> seq<obj>
-  abstract member FromSequence : seq<obj> -> obj
-
-type ListProcessor<'T>() =
-  interface ISequenceProcessor with
-    member this.ToSequence (x: obj) = Seq.map box (x :?> list<'T>)
-    member this.FromSequence (s: seq<obj>) = box [for x in s -> x :?> 'T]
 
 
-module Picklers =
+module Writers =
   
   let listCond (t:Type) = t.IsGenericType && (t.GetGenericTypeDefinition() = typedefof<list<_>>)
-  let list (host: Host) value = 
+  let list (host: WriterHost) value = 
     let w = host.Writer
     let args = value.GetType().GetGenericArguments()
     let arg = args.[0]
@@ -47,27 +43,33 @@ module Picklers =
       |> unbox : ISequenceProcessor
     sP.ToSequence value |> Seq.iter host.ProcessValue
 
-  FSharpType.IsUnion
-  let union (host: Host) value = 
+  let union (host: WriterHost) value = 
     let w = host.Writer
     let (info, fieldValues) = FSharpValue.GetUnionFields (value, value.GetType())
-    w.WriteStartElement (info.Name)
-    Seq.iter2 host.ProcessMember (info.GetFields()) fieldValues
-    w.WriteEndElement ()
+    let fields = info.GetFields()
+    if fields.Length = 0 then
+      w.WriteElementString (info.Name, String.Empty)
+    else 
+      w.WriteStartElement (info.Name)
+      if fields.Length = 1 then
+        host.ProcessValue fieldValues.[0]
+      else
+        Seq.iter2 host.ProcessMember fields fieldValues
+      w.WriteEndElement ()
 
-  let memberP (host: Host) (mi: MemberInfo) value = 
+  let memberP (host: WriterHost) (mi: MemberInfo) value = 
     let w = host.Writer
     w.WriteStartElement (mi.Name)
     host.ProcessValue value
     w.WriteEndElement ()
 
-  let record (host: Host) value = 
+  let record (host: WriterHost) value = 
     let w = host.Writer
     let fieldInfos = FSharpType.GetRecordFields <| value.GetType()
     let fieldValues = FSharpValue.GetRecordFields value
     Seq.iter2 host.ProcessMember fieldInfos fieldValues
 
-  let scalarPicklers = 
+  let scalarWriters = 
     let writers: (Type * (XmlTextWriter -> obj -> unit)) list =  
       [
         typedefof<bool>          , fun w v -> w.WriteValue (unbox v : bool)
@@ -83,12 +85,12 @@ module Picklers =
     writers 
     |> List.map (fun (t, f) -> 
       let key = fun typ -> t = typ
-      let value = fun (host: Host) value -> f host.Writer value
+      let value = fun (host: WriterHost) value -> f host.Writer value
       key, value
     )
 
   let valuePicklers = 
-    scalarPicklers @
+    scalarWriters @
     [
       listCond, list
       FSharpType.IsUnion, union
@@ -101,29 +103,8 @@ module Picklers =
 
 //
 
-type Document = Block list
 
-and Block = 
-  | Text of string
-  | FoldedText of FoldedText
 
-and FoldedText = 
-  {
-    Caption : string
-    Content : Document
-    Level : int
-  }
-
-let text = 
-  [
-    Text "owejfowiejf owiejf oiwje foiwje foij oierjg oiwj gwef. "
-    FoldedText 
-      { 
-        Caption = "oeigj"
-        Content = [Text "oweifj"] 
-        Level = 0
-      }
-  ]
 
 let createWriter () =
   let sw = new StringWriter()
@@ -133,10 +114,6 @@ let createWriter () =
 
 let createHost () = 
   let (sw, writer) = createWriter ()
-  let host = Host(writer, Picklers.valuePicklers, Picklers.memberPicklers)
-  host, sw
+  let host = WriterHost(writer, Writers.valuePicklers, Writers.memberPicklers)
+  host, writer, sw
 
-let (host, sw) = createHost ()
-host.ProcessValue text
-
-sw.ToString() |> printfn "%s"

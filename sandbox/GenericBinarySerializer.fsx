@@ -1,3 +1,5 @@
+// Source: http://www.fssnip.net/6u
+
 module Serialization.Binary
 
 exception EncodingError

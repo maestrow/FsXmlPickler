@@ -53,15 +53,9 @@ let rec makeTree (enm: IEnumerator<Item>) (stack: ContentItem list) =
   else 
     match enm.Current with
     | BeginTag name -> makeTree enm (Tag { Name = name; Content = makeTree enm [] }::stack)
-    | EndTag -> stack
+    | EndTag -> List.rev stack
     | Text value -> makeTree enm ((Value value)::stack)
-
-let rec rev (tree: ContentItem list) = 
-  List.rev tree
-  |> List.map (function
-                | Tag t -> Tag { t with Content = rev t.Content }
-                | Value v -> Value v)
-              
+            
 
 let rec toXml (tree: ContentItem list) (level: int) (res: TextWriter) = 
   let indent = Seq.init level (fun i -> "  ") |> String.Concat
@@ -81,6 +75,6 @@ printfn "%A" tree
 
 
 let tw = new StringWriter()
-toXml (rev tree) 0 tw
+toXml tree 0 tw
 
 tw.ToString() |> printfn "%s"

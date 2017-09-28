@@ -1,0 +1,17 @@
+<root>
+  <text>1</text>
+  <foldedText>
+    <caption>2</caption>
+    <content>
+      <text>3</text>
+    </content>
+  </foldedText>
+  <text>4</text>
+  <foldedText>
+    <caption>5</caption>
+    <content>
+      <text>6</text>
+    </content>
+  </foldedText>
+  <text>7</text>
+</root>
